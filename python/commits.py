@@ -24,3 +24,6 @@
 # git commit -m 'docs: add docs for function (name)'
 # ```
 # Сделайте фиктивный коммит с типом test, добавляющий тесты для этой же функции.
+# ```bash
+# git commit -m 'test: add tests for function (name)'
+# ```
