@@ -16,3 +16,11 @@
 # ```bash
 # git commit -m 'style: formatted the code and corrected indentations'
 # ```
+#
+# 5. Документация и тестирование:
+#
+# Сделайте фиктивный коммит с типом docs, добавляющий или улучшающий документацию для вашей новой функции.
+# ```bash
+# git commit -m 'docs: add docs for function (name)'
+# ```
+# Сделайте фиктивный коммит с типом test, добавляющий тесты для этой же функции.
