@@ -210,12 +210,12 @@ else:  # значит, совпали единицы
 # +
 three_digit_number: int = int(input())
 
-# ── извлекаем цифры ────────────────────────────────────────────────────────────
+# ── извлекаем цифры
 hundreds_digit: int = three_digit_number // 100
 tens_digit: int = (three_digit_number // 10) % 10
 units_digit: int = three_digit_number % 10
 
-# ── все шесть возможных комбинаций (ab, ac, ba, bc, ca, cb) ───────────────────
+# ── все шесть возможных комбинаций (ab, ac, ba, bc, ca, cb)
 candidate_numbers: list[int] = [
     hundreds_digit * 10 + tens_digit,
     hundreds_digit * 10 + units_digit,
@@ -225,10 +225,10 @@ candidate_numbers: list[int] = [
     units_digit * 10 + tens_digit,
 ]
 
-# ── отсекаем «однозначные» варианты (старший разряд = 0) ──────────────────────
+# ── отсекаем «однозначные» варианты (старший разряд = 0)
 two_digit_numbers: list[int] = [num for num in candidate_numbers if num >= 10]
 
-# ── ищем минимальное и максимальное без лишних if-блоков ──────────────────────
+# ── ищем минимальное и максимальное без лишних if-блоков
 minimal_number: int = min(two_digit_numbers)
 maximal_number: int = max(two_digit_numbers)
 
@@ -385,11 +385,11 @@ else:
 
 # +
 # 19
-# координаты исследователя ------------------------------------------------------
+# координаты исследователя
 x_coord: float = float(input())
 y_coord: float = float(input())
 
-# константы ---------------------------------------------------------------------
+# константы
 ISLAND_RADIUS_SQ: float = 100.0  # 10² — проверяем без извлечения корня
 
 
@@ -428,7 +428,7 @@ def is_inside_quicksand(x_value: float, y_value: float) -> bool:
     return False
 
 
-# вывод результата --------------------------------------------------------------
+# вывод результата
 if not is_inside_island(x_coord, y_coord):
     print("Вы вышли в море и рискуете быть съеденным акулой!")
 elif is_inside_quicksand(x_coord, y_coord):
@@ -438,12 +438,12 @@ else:
 
 # +
 # 20
-# чтение исходных описаний ------------------------------------------------------
+# чтение исходных описаний
 first_description: str = input()
 second_description: str = input()
 third_description: str = input()
 
-# ищем строки, в которых встречается слово «зайка» -----------------------------
+# ищем строки, в которых встречается слово «зайка»
 matching_descriptions: list[str] = []
 
 for current_description in (
@@ -454,12 +454,12 @@ for current_description in (
     if "зайка" in current_description:
         matching_descriptions.append(current_description)
 
-# среди подходящих выбираем лексикографически минимальную ----------------------
+# среди подходящих выбираем лексикографически минимальную
 chosen_description: str = min(matching_descriptions)
 
-# длина выбранной строки -------------------------------------------------------
+# длина выбранной строки
 description_length: int = len(chosen_description)
 
-# вывод результата -------------------------------------------------------------
+# вывод результата
 print(chosen_description, end=" ")
 print(description_length)
