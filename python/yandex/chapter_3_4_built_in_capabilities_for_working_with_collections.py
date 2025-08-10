@@ -1,6 +1,7 @@
 """Working with built-in functions from python and itertools."""
 
 # +
+import re
 from collections.abc import Iterator
 from itertools import (
     accumulate,
@@ -13,6 +14,7 @@ from itertools import (
     product,
     zip_longest,
 )
+from typing import Callable, ClassVar
 
 
 def task_1() -> None:
@@ -312,277 +314,280 @@ def task_17() -> None:
 task_17()
 
 # +
-# def task_18() -> None:
-#     """Build truth table for expression in a, b, c without eval."""
-#     expression_text: str = input().strip()
-#     tokens: list[str] = expression_text.split()
-
-#     # Operator precedence and associativity
-#     precedence: dict[str, int] = {"not": 3, "and": 2, "or": 1}
-#     associativity: dict[str, str] = {
-#         "not": "right",
-#         "and": "left",
-#         "or": "left",
-#     }
-
-#     # Shunting-yard to convert to RPN
-#     output_queue: list[str] = []
-#     operator_stack: list[str] = []
-#     for token in tokens:
-#         if token in ("a", "b", "c"):
-#             output_queue.append(token)
-#         elif token == "(":
-#             operator_stack.append(token)
-#         elif token == ")":
-#             while operator_stack and operator_stack[-1] != "(":
-#                 output_queue.append(operator_stack.pop())
-#             operator_stack.pop()
-#         else:
-#             # token is an operator: not, and, or
-#             while (
-#                 operator_stack
-#                 and operator_stack[-1] != "("
-#                 and (
-#                     associativity[token] == "left"
-#                     and precedence[token] <= precedence[operator_stack[-1]]
-#                     or associativity[token] == "right"
-#                     and precedence[token] < precedence[operator_stack[-1]]
-#                 )
-#             ):
-#                 output_queue.append(operator_stack.pop())
-#             operator_stack.append(token)
-#     while operator_stack:
-#         output_queue.append(operator_stack.pop())
-
-#     # Evaluate RPN without eval
-#     def apply_unary(op: str, stack: list[bool]) -> None:
-#         operand: bool = stack.pop()
-#         stack.append(not operand)
-
-#     def apply_binary(op: str, stack: list[bool]) -> None:
-#         right: bool = stack.pop()
-#         left: bool = stack.pop()
-#         if op == "and":
-#             stack.append(left and right)
-#         elif op == "or":
-#             stack.append(left or right)
-
-#     # Print header
-#     print("a b c f")
-#     # Iterate all 0/1 assignments
-#     for a_val, b_val, c_val in product((0, 1), repeat=3):
-#         env: dict[str, bool] = {
-#             "a": bool(a_val),
-#             "b": bool(b_val),
-#             "c": bool(c_val),
-#         }
-#         stack_eval: list[bool] = []
-#         for token in output_queue:
-#             if token in env:
-#                 stack_eval.append(env[token])
-#             elif token == "not":
-#                 apply_unary(token, stack_eval)
-#             else:  # 'and' or 'or'
-#                 apply_binary(token, stack_eval)
-
-#         result_flag: bool = stack_eval[0]
-#         print(a_val, b_val, c_val, int(result_flag))
+PRECEDENCE: dict[str, int] = {"not": 3, "and": 2, "or": 1}
+ASSOCIATIVITY: dict[str, str] = {"not": "right", "and": "left", "or": "left"}
 
 
-# task_18()
+def is_operator_pop_required(current_op: str, top_op: str) -> bool:
+    """Return True if top operator must be popped before pushing current."""
+    is_left: bool = ASSOCIATIVITY[current_op] == "left"
+    is_right: bool = ASSOCIATIVITY[current_op] == "right"
+    le_prec: bool = PRECEDENCE[current_op] <= PRECEDENCE[top_op]
+    lt_prec: bool = PRECEDENCE[current_op] < PRECEDENCE[top_op]
+    return (is_left and le_prec) or (is_right and lt_prec)
+
+
+def to_rpn(tokens: list[str]) -> list[str]:
+    """Convert infix tokens to Reverse Polish Notation."""
+    output: list[str] = []
+    op_stack: list[str] = []
+    for token in tokens:
+        if token in ("a", "b", "c"):
+            output.append(token)
+        elif token == "(":
+            op_stack.append(token)
+        elif token == ")":
+            while op_stack and op_stack[-1] != "(":
+                output.append(op_stack.pop())
+            op_stack.pop()
+        else:
+            while op_stack and op_stack[-1] != "(":
+                top_op: str = op_stack[-1]
+                if not is_operator_pop_required(token, top_op):
+                    break
+                output.append(op_stack.pop())
+            op_stack.append(token)
+    while op_stack:
+        output.append(op_stack.pop())
+    return output
+
+
+def is_rpn_true(postfix_tokens: list[str], environment: dict[str, bool]) -> bool:
+    """Evaluate RPN boolean expression for environment."""
+    stack: list[bool] = []
+    for token in postfix_tokens:
+        if token in environment:
+            stack.append(environment[token])
+        elif token == "not":
+            operand: bool = stack.pop()
+            stack.append(not operand)
+        else:
+            right: bool = stack.pop()
+            left: bool = stack.pop()
+            stack.append(left and right if token == "and" else left or right)
+    return stack[0]
+
+
+def task_18() -> None:
+    """Build truth table for expression in a, b, c."""
+    expression_text: str = input().strip()
+    tokens: list[str] = expression_text.split()
+    rpn_tokens: list[str] = to_rpn(tokens)
+
+    print("a b c f")
+    for a_val, b_val, c_val in product((0, 1), repeat=3):
+        env: dict[str, bool] = {"a": bool(a_val), "b": bool(b_val), "c": bool(c_val)}
+        result_flag: bool = is_rpn_true(rpn_tokens, env)
+        print(a_val, b_val, c_val, int(result_flag))
+
+
+task_18()
+
 
 # +
-# def task_19() -> None:
-#     """Build truth table for expression with uppercase variables."""
-#     raw_expression: str = input().strip()
+class LogicTools19:
+    """Namespace с хелперами для task_19."""
 
-#     # Tokenize into variables, operators, and parentheses
-#     token_pattern: str = r"and|or|not|\(|\)|[A-Z]"
-#     tokens: list[str] = re.findall(token_pattern, raw_expression)
+    TOKEN_PATTERN: str = r"and|or|not|\(|\)|[A-Z]"
+    PRECEDENCE: dict[str, int] = {"not": 3, "and": 2, "or": 1}
+    ASSOCIATIVITY: dict[str, str] = {
+        "not": "right",
+        "and": "left",
+        "or": "left",
+    }
 
-#     # Operator precedence and associativity
-#     precedence: dict[str, int] = {"not": 3, "and": 2, "or": 1}
-#     associativity: dict[str, str] = {
-#         "not": "right",
-#         "and": "left",
-#         "or": "left",
-#     }
+    @staticmethod
+    def is_operator_pop_required(current_op: str, top_op: str) -> bool:
+        """Return True if top operator must be popped before pushing."""
+        is_left: bool = LogicTools19.ASSOCIATIVITY[current_op] == "left"
+        is_right: bool = LogicTools19.ASSOCIATIVITY[current_op] == "right"
+        le_prec: bool = (
+            LogicTools19.PRECEDENCE[current_op] <= LogicTools19.PRECEDENCE[top_op]
+        )
+        lt_prec: bool = (
+            LogicTools19.PRECEDENCE[current_op] < LogicTools19.PRECEDENCE[top_op]
+        )
+        return (is_left and le_prec) or (is_right and lt_prec)
 
-#     # Shunting-yard: convert to Reverse Polish Notation
-#     rpn_queue: list[str] = []
-#     operator_stack: list[str] = []
-#     for symbol in tokens:
-#         if re.fullmatch(r"[A-Z]", symbol):
-#             rpn_queue.append(symbol)
-#         elif symbol == "(":
-#             operator_stack.append(symbol)
-#         elif symbol == ")":
-#             while operator_stack and operator_stack[-1] != "(":
-#                 rpn_queue.append(operator_stack.pop())
-#             operator_stack.pop()
-#         else:
-#             # symbol is an operator
-#             while (
-#                 operator_stack
-#                 and operator_stack[-1] != "("
-#                 and (
-#                     associativity[symbol] == "left"
-#                     and precedence[symbol] <= precedence[operator_stack[-1]]
-#                     or associativity[symbol] == "right"
-#                     and precedence[symbol] < precedence[operator_stack[-1]]
-#                 )
-#             ):
-#                 rpn_queue.append(operator_stack.pop())
-#             operator_stack.append(symbol)
-#     while operator_stack:
-#         rpn_queue.append(operator_stack.pop())
+    @staticmethod
+    def to_rpn(tokens: list[str]) -> list[str]:
+        """Convert infix tokens to Reverse Polish Notation."""
+        output: list[str] = []
+        op_stack: list[str] = []
+        for token in tokens:
+            if re.fullmatch(r"[A-Z]", token):
+                output.append(token)
+            elif token == "(":
+                op_stack.append(token)
+            elif token == ")":
+                while op_stack and op_stack[-1] != "(":
+                    output.append(op_stack.pop())
+                op_stack.pop()
+            else:
+                while op_stack and op_stack[-1] != "(":
+                    top_op: str = op_stack[-1]
+                    need_pop: bool = LogicTools19.is_operator_pop_required(
+                        token, top_op
+                    )
+                    if not need_pop:
+                        break
+                    output.append(op_stack.pop())
+                op_stack.append(token)
+        while op_stack:
+            output.append(op_stack.pop())
+        return output
 
-#     # Gather and sort variable names
-#     variable_names: list[str] = sorted(
-#         {sym for sym in tokens if re.fullmatch(r"[A-Z]", sym)}
-#     )
-#     print(*variable_names, "F")
-
-#     # Evaluate RPN for each assignment of 0/1
-#     for assignment in product((0, 1), repeat=len(variable_names)):
-#         environment: dict[str, bool] = {
-#             var_name: bool(bit) for var_name, bit in zip(variable_names,
-# assignment)
-#         }
-#         evaluation_stack: list[bool] = []
-#         for symbol in rpn_queue:
-#             if symbol in environment:
-#                 evaluation_stack.append(environment[symbol])
-#             elif symbol == "not":
-#                 operand_value: bool = evaluation_stack.pop()
-#                 evaluation_stack.append(not operand_value)
-#             else:
-#                 right_value: bool = evaluation_stack.pop()
-#                 left_value: bool = evaluation_stack.pop()
-#                 if symbol == "and":
-#                     evaluation_stack.append(left_value and right_value)
-#                 else:  # symbol == 'or'
-#                     evaluation_stack.append(left_value or right_value)
-#         truth_value: bool = evaluation_stack[0]
-#         print(*assignment, int(truth_value))
+    @staticmethod
+    def is_rpn_true(postfix_tokens: list[str], environment: dict[str, bool]) -> bool:
+        """Evaluate RPN boolean expression for environment."""
+        stack_values: list[bool] = []
+        for symbol in postfix_tokens:
+            if symbol in environment:
+                stack_values.append(environment[symbol])
+            elif symbol == "not":
+                operand: bool = stack_values.pop()
+                stack_values.append(not operand)
+            else:
+                right_value: bool = stack_values.pop()
+                left_value: bool = stack_values.pop()
+                is_and: bool = symbol == "and"
+                stack_values.append(
+                    (left_value and right_value)
+                    if is_and
+                    else (left_value or right_value)
+                )
+        return stack_values[0]
 
 
-# task_19()
+def task_19() -> None:
+    """Build truth table for expression with uppercase variables."""
+    raw_expression: str = input().strip()
+    tokens: list[str] = re.findall(LogicTools19.TOKEN_PATTERN, raw_expression)
+    rpn_tokens: list[str] = LogicTools19.to_rpn(tokens)
+
+    variable_names: list[str] = sorted(
+        {tok for tok in tokens if re.fullmatch(r"[A-Z]", tok)}
+    )
+    print(*variable_names, "F")
+
+    for bits in product((0, 1), repeat=len(variable_names)):
+        environment: dict[str, bool] = {
+            name: bool(bit) for name, bit in zip(variable_names, bits)
+        }
+        truth_value: bool = LogicTools19.is_rpn_true(rpn_tokens, environment)
+        print(*bits, int(truth_value))
+
+
+task_19()
 
 # +
-# import re
-# from itertools import product
+BoolBinOp = Callable[[bool, bool], bool]
 
 
-# def task_20() -> None:
-#     """Build truth table for expression with ->, ^, and ~ operators."""
-#     raw_expression: str = input().strip()
+class LogicTools20:
+    """Helpers for task_20 with ->, ^, ~ operators."""
 
-#     # Tokenize into variables, operators, and parentheses
-#     token_pattern = r'->|not|and|or|\^|~|\(|\)|[A-Z]'
-#     tokens: list[str] = re.findall(token_pattern, raw_expression)
+    TOKEN_PATTERN: ClassVar[str] = r"->|not|and|or|\^|~|\(|\)|[A-Z]"
+    PRECEDENCE: ClassVar[dict[str, int]] = {
+        "not": 5,
+        "and": 4,
+        "or": 3,
+        "^": 2,
+        "->": 1,
+        "~": 0,
+    }
+    ASSOCIATIVITY: ClassVar[dict[str, str]] = {
+        "not": "right",
+        "and": "left",
+        "or": "left",
+        "^": "left",
+        "->": "right",
+        "~": "left",
+    }
+    BINARY_OPS: ClassVar[dict[str, BoolBinOp]] = {
+        "and": (lambda left_value, right_value: left_value and right_value),
+        "or": (lambda left_value, right_value: left_value or right_value),
+        "^": (lambda left_value, right_value: left_value != right_value),
+        "->": (lambda left_value, right_value: (not left_value) or right_value),
+        "~": (lambda left_value, right_value: left_value == right_value),
+    }
 
-#     # Operator precedence and associativity
-#     precedence: dict[str, int] = {
-#         'not': 5,
-#         'and': 4,
-#         'or': 3,
-#         '^': 2,
-#         '->': 1,
-#         '~': 0,
-#     }
-#     associativity: dict[str, str] = {
-#         'not': 'right',
-#         'and': 'left',
-#         'or': 'left',
-#         '^': 'left',
-#         '->': 'right',
-#         '~': 'left',
-#     }
+    @staticmethod
+    def is_operator_pop_required(current_op: str, top_op: str) -> bool:
+        """Return True if top operator must be popped before pushing."""
+        is_left: bool = LogicTools20.ASSOCIATIVITY[current_op] == "left"
+        is_right: bool = LogicTools20.ASSOCIATIVITY[current_op] == "right"
+        le_prec: bool = (
+            LogicTools20.PRECEDENCE[current_op] <= LogicTools20.PRECEDENCE[top_op]
+        )
+        lt_prec: bool = (
+            LogicTools20.PRECEDENCE[current_op] < LogicTools20.PRECEDENCE[top_op]
+        )
+        return (is_left and le_prec) or (is_right and lt_prec)
 
-#     # Shunting-yard algorithm to get Reverse Polish Notation (RPN)
-#     output_queue: list[str] = []
-#     operator_stack: list[str] = []
-#     for token in tokens:
-#         if re.fullmatch(r'[A-Z]', token):
-#             output_queue.append(token)
-#         elif token == '(':
-#             operator_stack.append(token)
-#         elif token == ')':
-#             while operator_stack and operator_stack[-1] != '(':
-#                 output_queue.append(operator_stack.pop())
-#             operator_stack.pop()
-#         else:
-#             # operator
-#             while (
-#                 operator_stack and operator_stack[-1] != '(' and
-#                 ((associativity[token] == 'left' and
-#                   precedence[token] <= precedence[operator_stack[-1]]) or
-#                  (associativity[token] == 'right' and
-#                   precedence[token] < precedence[operator_stack[-1]]))
-#             ):
-#                 output_queue.append(operator_stack.pop())
-#             operator_stack.append(token)
-#     while operator_stack:
-#         output_queue.append(operator_stack.pop())
+    @staticmethod
+    def to_rpn(tokens: list[str]) -> list[str]:
+        """Convert infix tokens to Reverse Polish Notation."""
+        output: list[str] = []
+        op_stack: list[str] = []
+        for token in tokens:
+            if re.fullmatch(r"[A-Z]", token):
+                output.append(token)
+            elif token == "(":
+                op_stack.append(token)
+            elif token == ")":
+                while op_stack and op_stack[-1] != "(":
+                    output.append(op_stack.pop())
+                op_stack.pop()
+            else:
+                while op_stack and op_stack[-1] != "(":
+                    top_op: str = op_stack[-1]
+                    need_pop: bool = LogicTools20.is_operator_pop_required(
+                        token, top_op
+                    )
+                    if not need_pop:
+                        break
+                    output.append(op_stack.pop())
+                op_stack.append(token)
+        while op_stack:
+            output.append(op_stack.pop())
+        return output
 
-#     # Boolean operation implementations
-#     def is_negation(value: bool) -> bool:
-#         return not value
-
-#     def is_conjunction(left: bool, right: bool) -> bool:
-#         return left and right
-
-#     def is_disjunction(left: bool, right: bool) -> bool:
-#         return left or right
-
-#     def is_strict_disjunction(left: bool, right: bool) -> bool:
-#         return left != right
-
-#     def is_implication(left: bool, right: bool) -> bool:
-#         return (not left) or right
-
-#     def is_equivalence(left: bool, right: bool) -> bool:
-#         return left == right
-
-#     # Gather and sort variable names
-#     variable_names: list[str] = sorted({
-#         tok for tok in tokens if re.fullmatch(r'[A-Z]', tok)
-#     })
-#     print(*variable_names, "F")
-
-#     # Evaluate for each combination of variable assignments
-#     for combo in product((0, 1), repeat=len(variable_names)):
-#         environment: dict[str, bool] = {
-#             var: bool(bit) for var, bit in zip(variable_names, combo)
-#         }
-#         evaluation_stack: list[bool] = []
-#         for token in output_queue:
-#             if token == 'not':
-#                 operand = evaluation_stack.pop()
-#                 evaluation_stack.append(is_negation(operand))
-#             elif token in ('and', 'or', '^', '->', '~'):
-#                 right_operand = evaluation_stack.pop()
-#                 left_operand = evaluation_stack.pop()
-#                 if token == 'and':
-#                     evaluation_stack.append(is_conjunction(left_operand,
-# right_operand))
-#                 elif token == 'or':
-#                     evaluation_stack.append(is_disjunction(left_operand,
-# right_operand))
-#                 elif token == '^':
-#                     evaluation_stack.append(is_strict_disjunction
-# (left_operand, right_operand)) !!
-#                 elif token == '->':
-#                     evaluation_stack.append(is_implication(left_operand,
-# right_operand))
-#                 else:
-#                     evaluation_stack.append(is_equivalence(left_operand,
-# right_operand))
-#             else:
-#                 evaluation_stack.append(environment[token])
-#         final_value = evaluation_stack[0]
-#         print(*combo, int(final_value))
+    @staticmethod
+    def is_rpn_true(postfix_tokens: list[str], environment: dict[str, bool]) -> bool:
+        """Evaluate RPN boolean expression for environment."""
+        stack_values: list[bool] = []
+        for symbol in postfix_tokens:
+            if symbol in environment:
+                stack_values.append(environment[symbol])
+            elif symbol == "not":
+                operand: bool = stack_values.pop()
+                stack_values.append(not operand)
+            else:
+                right_value: bool = stack_values.pop()
+                left_value: bool = stack_values.pop()
+                apply_op: BoolBinOp = LogicTools20.BINARY_OPS[symbol]
+                stack_values.append(apply_op(left_value, right_value))
+        return stack_values[0]
 
 
-# task_20()
+def task_20() -> None:
+    """Build truth table for expression with ->, ^, and ~ operators."""
+    raw_expression: str = input().strip()
+    tokens: list[str] = re.findall(LogicTools20.TOKEN_PATTERN, raw_expression)
+    rpn_tokens: list[str] = LogicTools20.to_rpn(tokens)
+
+    variable_names: list[str] = sorted(
+        {tok for tok in tokens if re.fullmatch(r"[A-Z]", tok)}
+    )
+    print(*variable_names, "F")
+
+    for bits in product((0, 1), repeat=len(variable_names)):
+        environment: dict[str, bool] = {
+            name: bool(bit) for name, bit in zip(variable_names, bits)
+        }
+        truth_value: bool = LogicTools20.is_rpn_true(rpn_tokens, environment)
+        print(*bits, int(truth_value))
+
+
+task_20()
